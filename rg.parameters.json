@@ -1,0 +1,42 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "mspOfferName": {
+            "value": "GCAPP_POWERSHELL_OFFER"
+        },
+        "rgName": {
+            "value": "powershell-test-rg"
+        },
+        "mspOfferDescription": {
+            "value": "Akamai-MS for microsegmentation on cloud"
+        },
+        "managedByTenantId": {
+            "value": "514876bd-5965-4b40-b0c8-e336cf72c743"
+        },
+        "authorizations": {
+            "value": [
+                {
+                    "principalId": "9d9630c5-722a-44f7-ac74-a8a015bae405",
+                    "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+                    "principalIdDisplayName": "azSecCloud_Ms_Devops"
+                },
+                {
+                    "principalId": "9d9630c5-722a-44f7-ac74-a8a015bae405",
+                    "roleDefinitionId": "91c1777a-f3dc-4fae-b103-61d183457e46",
+                    "principalIdDisplayName": "azSecCloud_Ms_Devops"
+                },
+                {
+                    "principalId": "2c530e6c-551e-4fa9-80ec-3df5b28fb68a",
+                    "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+                    "principalIdDisplayName": "GC-CloudMs-Lab"
+                },
+                {
+                    "principalId": "2c530e6c-551e-4fa9-80ec-3df5b28fb68a",
+                    "roleDefinitionId": "91c1777a-f3dc-4fae-b103-61d183457e46",
+                    "principalIdDisplayName": "GC-CloudMs-Lab"
+                }
+            ]
+        }
+    }
+}
