@@ -163,11 +163,11 @@ function New-FunctionApp ($identity, $functionAppName, $appServicePlanName) {
     if ($existingFunctionApp -eq $null) {
         # Function App does not exist, create it
         $functionApp = New-AzFunctionApp -Name $functionAppName `
-        -ResourceGroupName $resourceGroupName `
-        -PlanName $appServicePlanName `
-        -StorageAccountName $storage `
-        -Runtime Python -OSType Linux -FunctionsVersion $functionsVersion -RuntimeVersion $pythonVersion `
-        -IdentityID $identity.Id -IdentityType UserAssigned
+                                            -ResourceGroupName $resourceGroupName `
+                                            -PlanName $appServicePlanName `
+                                            -StorageAccountName $storage `
+                                            -Runtime Python -OSType Linux -FunctionsVersion $functionsVersion -RuntimeVersion $pythonVersion `
+                                            -IdentityID $identity.Id -IdentityType UserAssigned
         Write-Host "Azure Function App '$functionAppName' created successfully in Resource Group '$resourceGroupName'."
     } else {
         # Function App already exists
@@ -236,9 +236,32 @@ function New-VirtualNetwork () {
     New-AzVirtualNetwork -Name $vnetName -ResourceGroupName $resourceGroupName -Location $location -AddressPrefix "10.0.0.0/16" -Subnet $appSubnet    
 }
 
+function Set-SubnetDelegation() {
+    $virtualNetwork = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupName $resourceGroupName -ErrorAction SilentlyContinue
+    $subnet = Get-AzVirtualNetworkSubnetConfig -Name $appSubnet -VirtualNetwork $virtualNetwork
+    Add-AzDelegation -Name "functionAppDelegation" `
+        -ServiceName "Microsoft.Web/serverFarms" `
+        -Subnet $subnet
+
+    Set-AzVirtualNetwork -VirtualNetwork $virtualNetwork
+}
+
+function Add-VnetIntegration($functionAppName) {
+    $virtualNetwork = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupName $resourceGroupName -ErrorAction SilentlyContinue
+    $subnet = Get-AzVirtualNetworkSubnetConfig -Name $appSubnet -VirtualNetwork $virtualNetwork
+    Write-Host "subnet_id '$($subnet.Id)'."
+    $functionApp = Get-AzResource -ResourceType Microsoft.Web/sites -ResourceGroupName $resourceGroupName -ResourceName $functionAppName
+    Write-Host "func_id '$($functionApp.Id)'."
+    $functionApp.Properties.virtualNetworkSubnetId = $subnet.Id
+    $functionApp.Properties.vnetRouteAllEnabled = 'true'
+    $functionApp | Set-AzResource -Force
+}
 
 New-ResourceGroup
 $identity = New-ManagedIdentity
+Write-Host "15 seconds sleep started"
+Start-Sleep -Seconds 15
+Write-Host "sleep finsihed"
 Add-CustomRole $identity
 
 # Iterate through the list and assign subscription level roles
@@ -254,6 +277,7 @@ foreach ($roleName in $rgRoles) {
 New-KeyVault $identity
 New-StorageAccount 
 New-VirtualNetwork
+Set-SubnetDelegation
 
 # Iterate through the list and create Function Apps
 foreach ($functionAppName in $functionAppNames) {
@@ -262,13 +286,14 @@ foreach ($functionAppName in $functionAppNames) {
         
         Write-Host "$functionApp : $appServicePlanName"
         New-FunctionApp $identity $functionApp $appServicePlanName
+        Add-VnetIntegration $functionApp
     }
 }
 
-# # Register for resource provider
-# foreach ($resourceProvider in $resourceProviders) {
-#     Register-ResourceProvider $resourceProvider
-# }
+# Register for resource provider
+foreach ($resourceProvider in $resourceProviders) {
+    Register-ResourceProvider $resourceProvider
+}
 
-# Update-PramFile
-# New-LighthouseDeployment
+Update-PramFile
+New-LighthouseDeployment
