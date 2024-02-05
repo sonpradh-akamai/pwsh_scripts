@@ -9,6 +9,7 @@ param (
     [string]$offername = "GCAPP_POWERSHELL_OFFER"
 )
 
+. ./Variables.ps1
 $subScope = $subScope + $subscription_id
 
 # If installed, connect to Azure account

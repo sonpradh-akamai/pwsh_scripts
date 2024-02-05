@@ -1,3 +1,5 @@
+. ./Utils.ps1
+
 $identityName = "powershell_test_identity"
 $keyvaultName = "powershellTestKeyvault"
 $rgRoles = @("Contributor", "Storage Blob Data Contributor", "Azure Event Hubs Data Receiver")
@@ -5,14 +7,13 @@ $subRoles = @("Storage Blob Data Reader", "Reader")
 $resourceProviders = @("Microsoft.EventGrid", "Microsoft.Insights")
 $subScope = "/subscriptions/"
 
-
-$randomIdentifier = Get-Random
+$randomIdentifier = Get-RandomIdentifier
 $tag = @{script = "create-function-app-consumption-python"}
-#$storage = "stgaccpower$randomIdentifier"
-$storage = "stgaccpowersh994"
-$functionAppNames = @("gcc-inventory-service", "gcc-flowlog-collector", "gcc-management-service", "gcc-onboarding-service", "gcc-policy-service", "gcc-reveal-service", "gcc-topology-service")
-#$functionApp = "functpower-$randomIdentifier"
-$functionApp = "ffunctpower-1454944999"
+$storage = "stgaccpower$($randomIdentifier.ToLower())"
+$functionAppNames = @("gcapp-inventory-$randomIdentifier", "gcapp-log-collector-$randomIdentifier", "gcapp-management-$randomIdentifier", `
+                        "gcapp-onboarding-$randomIdentifier", "gcapp-policy-$randomIdentifier", "gcapp-reveal-$randomIdentifier", "gcapp-topology-$randomIdentifier")
+$appServicePlanNames = @("gcapp-inv-asp-$randomIdentifier", "gcapp-log-collector-asp-$randomIdentifier", "gcapp-management-asp-$randomIdentifier", `
+                        "gcapp-onboarding-asp-$randomIdentifier", "gcapp-policy-asp-$randomIdentifier", "gcapp-reveal-asp-$randomIdentifier", "gcapp-topology-asp-$randomIdentifier")
 $skuStorage = "Standard_LRS"
 $functionsVersion = "4"
 $pythonVersion = "3.9"
