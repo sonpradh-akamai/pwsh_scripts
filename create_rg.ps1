@@ -41,6 +41,7 @@ function New-ManagedIdentity () {
         # Identity already exists
         Write-Host "User-Managed Identity '$identityName' already exists in Resource Group '$resourceGroupName'."
     }
+    return $identity
 }
 
 function New-CustomRole () {
@@ -61,17 +62,20 @@ function New-CustomRole () {
     if ($gcappRole -eq $null) {
         $gcappRole = New-AzRoleDefinition -Role $role
         Write-Host "$gcappRoleName role created."
-    } else {
-        Write-Host "$gcappRoleName is already exits. Updating"
+    } 
+    else {
+        Write-Host "$gcappRoleName role already exits. Updating"
         $gcappRole.AssignableScopes = $role.AssignableScopes
+        $gcappRole.Actions = $role.Actions
         Set-AzRoleDefinition -Role $gcappRole
     }
 
     return $gcappRole
 }
 
-function Add-CustomRole () {
-    $gcappRole = New-CustomRole
+function Add-CustomRole ($identity) {
+    Write-Host "Received param for Add-CustomRole: {$($identity.name)}"
+    $gcappRole = Get-AzRoleDefinition $gcappRoleName
     $roleAssignment = Get-AzRoleAssignment -ObjectId $identity.PrincipalId -Scope $subScope -RoleDefinitionId $gcappRole.Id -ErrorAction SilentlyContinue
     if ($roleAssignment -eq $null) {
         $roleAssignment = New-AzRoleAssignment -ObjectId $identity.PrincipalId -RoleDefinitionId $gcappRole.Id -Scope $subScope
@@ -82,6 +86,7 @@ function Add-CustomRole () {
 }
 
 function Add-SubsRole ($identity, $roleName) {
+    Write-Host "Received param for Add-SubsRole: {$($identity.name)}, {$roleName}"
     # Check if role is already assigned to the identity
     $roleAssignment = Get-AzRoleAssignment -ObjectId $identity.PrincipalId -Scope $subScope -RoleDefinitionName $roleName -ErrorAction SilentlyContinue
 
@@ -94,6 +99,7 @@ function Add-SubsRole ($identity, $roleName) {
 }
 
 function Add-RgRole ($identity, $roleName) {
+    Write-Host "Received param for Add-RgRole: {$($identity.name)}, {$roleName}"
     # Check if role is already assigned to the identity
     $roleAssignment = Get-AzRoleAssignment -ObjectId $identity.PrincipalId -ResourceGroupName $resourceGroupName -RoleDefinitionName $roleName -ErrorAction SilentlyContinue
 
@@ -106,6 +112,7 @@ function Add-RgRole ($identity, $roleName) {
 }
 
 function New-KeyVault ($identity) {
+    Write-Host "Received param for  New-KeyVault: {$($identity.name)}"
     # Check if the keyvault already exists
     $keyvault = Get-AzKeyVault -ResourceGroupName $resourceGroupName -Name $keyvaultName -ErrorAction SilentlyContinue
 
@@ -136,14 +143,31 @@ function New-StorageAccount () {
     }
 }
 
-function New-FunctionApp ($identity, $functionAppName) {
+function New-FunctionApp ($identity, $functionAppName, $appServicePlanName) {
+    Write-Host "Received param for New-FunctionApp: {$($identity.name)}, {$functionAppName}, {$appServicePlanName}"
+    $existingFunctionAppPlan = Get-AzFunctionAppPlan -ResourceGroupName $resourceGroupName -Name $appServicePlanName -ErrorAction SilentlyContinue
+
+    if ($existingFunctionAppPlan -eq $null) {
+        # Function App does not exist, create it
+        New-AzFunctionAppPlan -Name $appServicePlanName -Location $location -ResourceGroupName $resourceGroupName -Sku EP1 `
+                 -WorkerType Linux -MinimumWorkerCount 1 -MaximumWorkerCount 2
+        Write-Host "Azure Function App plan '$appServicePlanName' created successfully in Resource Group '$resourceGroupName'."
+    } else {
+        # Function App already exists
+        Write-Host "Azure Function App plan '$appServicePlanName' already exists in Resource Group '$resourceGroupName'."
+    }    
+
     # Check if the Function App already exists
     $existingFunctionApp = Get-AzFunctionApp -ResourceGroupName $resourceGroupName -Name $functionAppName -ErrorAction SilentlyContinue
 
     if ($existingFunctionApp -eq $null) {
         # Function App does not exist, create it
-        New-AzFunctionApp -Name $functionAppName -StorageAccountName $storage -Location $location -ResourceGroupName $resourceGroupName -OSType Linux -Runtime Python -RuntimeVersion `
-            $pythonVersion -FunctionsVersion $functionsVersion -IdentityID $identity.Id -IdentityType UserAssigned
+        $functionApp = New-AzFunctionApp -Name $functionAppName `
+        -ResourceGroupName $resourceGroupName `
+        -PlanName $appServicePlanName `
+        -StorageAccountName $storage `
+        -Runtime Python -OSType Linux -FunctionsVersion $functionsVersion -RuntimeVersion $pythonVersion `
+        -IdentityID $identity.Id -IdentityType UserAssigned
         Write-Host "Azure Function App '$functionAppName' created successfully in Resource Group '$resourceGroupName'."
     } else {
         # Function App already exists
@@ -152,6 +176,7 @@ function New-FunctionApp ($identity, $functionAppName) {
 }
 
 function Register-ResourceProvider($resourceProvider) {
+    Write-Host "Received param for Register-ResourceProvider: {$resourceProvider}"
     Register-AzResourceProvider -ProviderNamespace $resourceProvider
     Write-Host "Registered for resource provider: $resourceProvider"
 }
@@ -206,33 +231,44 @@ function New-LighthouseDeployment () {
         -Verbose
 }
 
+function New-VirtualNetwork () {
+    $appSubnet = New-AzVirtualNetworkSubnetConfig -Name $appSubnet -AddressPrefix "10.0.1.0/24"
+    New-AzVirtualNetwork -Name $vnetName -ResourceGroupName $resourceGroupName -Location $location -AddressPrefix "10.0.0.0/16" -Subnet $appSubnet    
+}
+
 
 New-ResourceGroup
-New-ManagedIdentity ()
-Add-CustomRole
+$identity = New-ManagedIdentity
+Add-CustomRole $identity
 
 # Iterate through the list and assign subscription level roles
 foreach ($roleName in $subRoles) {
-    Add-SubsRole $identity, $roleName
+    Add-SubsRole $identity $roleName
 }
 
 # Iterate through the list and assign resource group level roles
 foreach ($roleName in $rgRoles) {
-    Add-RgRole $identity, $roleName
+    Add-RgRole $identity $roleName
 }
 
-New-KeyVault ($identity)
+New-KeyVault $identity
 New-StorageAccount 
+New-VirtualNetwork
 
 # Iterate through the list and create Function Apps
 foreach ($functionAppName in $functionAppNames) {
-    New-FunctionApp $identity, $functionAppName
+    foreach ($functionApp in $functionAppName.Keys) {
+        $appServicePlanName = $functionAppName[$functionApp]
+        
+        Write-Host "$functionApp : $appServicePlanName"
+        New-FunctionApp $identity $functionApp $appServicePlanName
+    }
 }
 
-# Register for resource provider
-foreach ($resourceProvider in $resourceProviders) {
-    Register-ResourceProvider $resourceProvider
-}
+# # Register for resource provider
+# foreach ($resourceProvider in $resourceProviders) {
+#     Register-ResourceProvider $resourceProvider
+# }
 
-Update-PramFile
-New-LighthouseDeployment
+# Update-PramFile
+# New-LighthouseDeployment

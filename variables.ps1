@@ -6,17 +6,27 @@ $rgRoles = @("Contributor", "Storage Blob Data Contributor", "Azure Event Hubs D
 $subRoles = @("Storage Blob Data Reader", "Reader")
 $resourceProviders = @("Microsoft.EventGrid", "Microsoft.Insights")
 $subScope = "/subscriptions/"
+$vnetName = "powershellVnet1"
+$appSubnet = "appSubnet"
 
 $randomIdentifier = Get-RandomIdentifier
 $tag = @{script = "create-function-app-consumption-python"}
 $storage = "stgaccpower$($randomIdentifier.ToLower())"
-$functionAppNames = @("gcapp-inventory-$randomIdentifier", "gcapp-log-collector-$randomIdentifier", "gcapp-management-$randomIdentifier", `
-                        "gcapp-onboarding-$randomIdentifier", "gcapp-policy-$randomIdentifier", "gcapp-reveal-$randomIdentifier", "gcapp-topology-$randomIdentifier")
-$appServicePlanNames = @("gcapp-inv-asp-$randomIdentifier", "gcapp-log-collector-asp-$randomIdentifier", "gcapp-management-asp-$randomIdentifier", `
-                        "gcapp-onboarding-asp-$randomIdentifier", "gcapp-policy-asp-$randomIdentifier", "gcapp-reveal-asp-$randomIdentifier", "gcapp-topology-asp-$randomIdentifier")
+$functionAppNames = @(@{"gcapp-inventory-$randomIdentifier"="gcapp-inv-asp-$randomIdentifier"}, 
+                        @{"gcapp-log-collector-$randomIdentifier"="gcapp-log-collector-asp-$randomIdentifier"},
+                        @{"gcapp-management-$randomIdentifier"="gcapp-management-asp-$randomIdentifier"},
+                        @{"gcapp-onboarding-$randomIdentifier"="gcapp-onboarding-asp-$randomIdentifier"},
+                        @{"gcapp-policy-$randomIdentifier"="gcapp-policy-asp-$randomIdentifier"},
+                        @{"gcapp-reveal-$randomIdentifier"="gcapp-reveal-asp-$randomIdentifier"},
+                        @{"gcapp-topology-$randomIdentifier"="gcapp-topology-asp-$randomIdentifier"}
+                    )
 $skuStorage = "Standard_LRS"
-$functionsVersion = "4"
-$pythonVersion = "3.9"
+$functionsVersion = 4
+$pythonVersion = 3.9
+$function_min_worker_count      = 1
+$function_max_worker_count      = 2
+$log_collector_max_worker_count = 20
+$inv_max_worker_count           = 5
 
 
 # Light House variables
