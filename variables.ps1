@@ -1,25 +1,37 @@
 . ./Utils.ps1
+$randomIdentifier = Get-RandomIdentifier
 
-$identityName = "powershell_test_identity"
-$keyvaultName = "powershellTestKeyvault"
+$identityName = "gcapp-identity"
+$keyvaultName = "gcapp-kv-$randomIdentifier"
 $rgRoles = @("Contributor", "Storage Blob Data Contributor", "Azure Event Hubs Data Receiver")
 $subRoles = @("Storage Blob Data Reader", "Reader")
 $resourceProviders = @("Microsoft.EventGrid", "Microsoft.Insights")
 $subScope = "/subscriptions/"
-$vnetName = "powershellVnet1"
-$appSubnet = "appSubnet"
+$vnetName = "gcapp-vnet-$randomIdentifier"
+$appSubnet = "fc_outbound_subnet"
 
-$randomIdentifier = Get-RandomIdentifier
-$tag = @{script = "create-function-app-consumption-python"}
-$storage = "stgaccpower$($randomIdentifier.ToLower())"
+$storage = "gcappstg$($randomIdentifier.ToLower())"
+# $functionAppNames = @("gcapp-inventory-$randomIdentifier", "gcapp-log-collector-$randomIdentifier", "gcapp-management-$randomIdentifier", `
+#                         "gcapp-onboarding-$randomIdentifier", "gcapp-policy-$randomIdentifier", "gcapp-reveal-$randomIdentifier")
+$appServicePlanNames = @("gcapp-inv-asp-$randomIdentifier", "gcapp-log-collector-asp-$randomIdentifier", "gcapp-management-asp-$randomIdentifier", `
+                            "gcapp-onboarding-asp-$randomIdentifier", "gcapp-policy-asp-$randomIdentifier", "gcapp-reveal-asp-$randomIdentifier")
+
 $functionAppNames = @(@{"gcapp-inventory-$randomIdentifier"="gcapp-inv-asp-$randomIdentifier"}, 
                         @{"gcapp-log-collector-$randomIdentifier"="gcapp-log-collector-asp-$randomIdentifier"},
                         @{"gcapp-management-$randomIdentifier"="gcapp-management-asp-$randomIdentifier"},
                         @{"gcapp-onboarding-$randomIdentifier"="gcapp-onboarding-asp-$randomIdentifier"},
                         @{"gcapp-policy-$randomIdentifier"="gcapp-policy-asp-$randomIdentifier"},
-                        @{"gcapp-reveal-$randomIdentifier"="gcapp-reveal-asp-$randomIdentifier"},
-                        @{"gcapp-topology-$randomIdentifier"="gcapp-topology-asp-$randomIdentifier"}
+                        @{"gcapp-reveal-$randomIdentifier"="gcapp-reveal-asp-$randomIdentifier"}
                     )
+
+[Collections.Generic.Dictionary[string, int]]$functionSleepTime = @{}
+$functionSleepTime["gcapp-inventory-$randomIdentifier"]= [int]2
+$functionSleepTime["gcapp-log-collector-$randomIdentifier"]= [int]10
+$functionSleepTime["gcapp-management-$randomIdentifier"]= [int]18
+$functionSleepTime["gcapp-onboarding-$randomIdentifier"]= [int]26
+$functionSleepTime["gcapp-policy-$randomIdentifier"]= [int]32
+$functionSleepTime["gcapp-reveal-$randomIdentifier"]= [int]40
+
 $skuStorage = "Standard_LRS"
 $functionsVersion = 4
 $pythonVersion = 3.9

@@ -46,6 +46,5 @@ function Get-RandomIdentifier () {
         $newObject | ConvertTo-Json -Depth 20 | Set-Content -Path $pathToFile -NoNewLine -Encoding UTF8
         Write-Host "Added random identifier: $randomIdentifier"
     }
-    Write-Host "returning random identifier: $randomIdentifier"
     return $randomIdentifier
 }

@@ -1,0 +1,11 @@
+# Installing dependencies
+Install-module Az -AllowClobber -Force
+Import-module Az
+
+# Service Principal login
+$pscredential = Get-Credential -UserName "c6baa698-6da5-444c-9055-7efbcf8405d1" #enter password "ujn8Q~J~FKQAnQyuiQBJyS7erEi2jgFVITkmqde2"
+Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant "63ff34fc-cc0a-4a83-8b0a-a1a6c354d473" 
+Set-AzContext -Subscription "ea21d634-a6d3-4fb5-8ee8-9bf23b7c95a1"
+
+# To run the script
+./customer_onboarding.ps1 -client_id c6baa698-6da5-444c-9055-7efbcf8405d1 -client_secret ujn8Q~J~FKQAnQyuiQBJyS7erEi2jgFVITkmqde2 -subscription_id ea21d634-a6d3-4fb5-8ee8-9bf23b7c95a1 -location eastus 
